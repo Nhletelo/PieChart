@@ -69,7 +69,21 @@
         android:layout_height="300dp"
         android:layout_marginTop="16dp"
         tools:ignore="MissingClass" />
+    <TextView
+        android:id="@+id/remainingBudgetText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Remaining Budget: R0.00"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="12dp" />
 
+    <Button
+        android:id="@+id/resetBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reset All"
+        android:layout_marginTop="16dp" />
     <ImageView
         android:id="@+id/congratsBadge"
         android:layout_width="wrap_content"

@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.piechart.databinding.ActivityMainBinding
-import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
@@ -26,15 +25,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize XP and level UI
+        // XP Progress Bar
         binding.xpProgress.max = maxXP
         updateLevelText()
 
-        // Set budget button logic
+        // Set budget
         binding.setBudgetBtn.setOnClickListener {
             try {
                 minBudget = binding.minBudgetInput.text.toString().toFloat()
@@ -45,13 +43,17 @@ class MainActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
+                totalExpense = 0f
+                updatePieChart()
+                updateRemainingBudget()
                 Toast.makeText(this, "Budget set successfully", Toast.LENGTH_SHORT).show()
+
             } catch (e: NumberFormatException) {
                 Toast.makeText(this, "Invalid budget input", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Add expense button logic
+        // Add expense
         binding.addExpenseBtn.setOnClickListener {
             try {
                 if (maxBudget <= 0f) {
@@ -60,15 +62,47 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val expense = binding.expenseInput.text.toString().toFloat()
-                totalExpense += expense
+                if (expense <= 0f) {
+                    Toast.makeText(this, "Expense must be greater than 0", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
 
+                val projectedTotal = totalExpense + expense
+                if (projectedTotal > maxBudget) {
+                    Toast.makeText(this, "Expense exceeds your remaining budget!", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+
+                totalExpense = projectedTotal
                 updateXP(10)
                 updatePieChart()
+                updateRemainingBudget()
 
-                Toast.makeText(this, "Expense added", Toast.LENGTH_SHORT).show()
+                if ((totalExpense / maxBudget) >= 0.9f) {
+                    Toast.makeText(this, "⚠️ You're almost out of budget!", Toast.LENGTH_LONG).show()
+                }
+
+                Toast.makeText(this, "Expense added successfully", Toast.LENGTH_SHORT).show()
+
             } catch (e: NumberFormatException) {
                 Toast.makeText(this, "Enter a valid expense amount", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        // Reset button
+        binding.resetBtn.setOnClickListener {
+            xp = 0
+            level = 1
+            totalExpense = 0f
+            minBudget = 0f
+            maxBudget = 0f
+            binding.minBudgetInput.text?.clear()
+            binding.maxBudgetInput.text?.clear()
+            binding.expenseInput.text?.clear()
+            updateLevelText()
+            updatePieChart()
+            updateRemainingBudget()
+            Toast.makeText(this, "Data reset successfully", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -78,18 +112,26 @@ class MainActivity : AppCompatActivity() {
             level++
             xp -= maxXP
 
-            // 🎉 Show the badge when leveling up
+            // Show badge and make it disappear after 3 seconds
+            binding.congratsBadge.setImageResource(R.drawable.congrats_badge)
             binding.congratsBadge.visibility = View.VISIBLE
 
-            Toast.makeText(this, "Level up! You're now level $level", Toast.LENGTH_SHORT).show()
-        } else {
-            // 🙈 Hide badge otherwise
-            binding.congratsBadge.visibility = View.GONE
+            // Optional animation (fade in)
+            binding.congratsBadge.alpha = 0f
+            binding.congratsBadge.animate().alpha(1f).setDuration(500).start()
+
+            // Auto-hide after 3 seconds
+            binding.congratsBadge.postDelayed({
+                binding.congratsBadge.visibility = View.GONE
+            }, 3000)
+
+            Toast.makeText(this, "🎉 Level up! You're now level $level", Toast.LENGTH_SHORT).show()
         }
 
         binding.xpProgress.progress = xp
         updateLevelText()
     }
+
 
     private fun updateLevelText() {
         binding.levelText.text = "Level: $level (XP: $xp/$maxXP)"
@@ -97,15 +139,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun updatePieChart() {
         val entries = ArrayList<PieEntry>()
-        entries.add(PieEntry(totalExpense, "Expenses"))
 
-        val remaining = maxBudget - totalExpense
-        if (remaining > 0) {
-            entries.add(PieEntry(remaining, "Remaining"))
+        if (maxBudget <= 0f) {
+            binding.pieChart.clear()
+            return
         }
 
-        val dataSet = PieDataSet(entries, "Budget Overview").apply {
+        val expensePercent = (totalExpense / maxBudget) * 100f
+        val remainingPercent = 100f - expensePercent
+
+        entries.add(PieEntry(expensePercent.coerceIn(0f, 100f), "Expenses"))
+        entries.add(PieEntry(remainingPercent.coerceIn(0f, 100f), "Remaining"))
+
+        val dataSet = PieDataSet(entries, "Budget Usage").apply {
             colors = ColorTemplate.MATERIAL_COLORS.toList()
+            valueTextColor = Color.BLACK
+            valueTextSize = 14f
         }
 
         val data = PieData(dataSet)
@@ -114,7 +163,15 @@ class MainActivity : AppCompatActivity() {
             description.isEnabled = false
             setUsePercentValues(true)
             setEntryLabelColor(Color.BLACK)
-            invalidate() // refresh chart
+            setEntryLabelTextSize(14f)
+            centerText = "Budget %"
+            setCenterTextSize(18f)
+            invalidate()
         }
+    }
+
+    private fun updateRemainingBudget() {
+        val remaining = maxBudget - totalExpense
+        binding.remainingBudgetText.text = "Remaining Budget: R${"%.2f".format(remaining)}"
     }
 }
