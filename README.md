@@ -23,6 +23,7 @@ Pie Chart updates to show used vs remaining budget.
 
 When XP reaches 100, user levels up and sees a badge momentarily.
 
+--
 ├── app
 │   ├── src/main/java/com/example/piechart
 │   │   └── MainActivity.kt
@@ -32,3 +33,4 @@ When XP reaches 100, user levels up and sees a badge momentarily.
 │   │   └── congrats_badge.png
 │   ├── res/values
 │   │   └── strings.xml, colors.xml
+--
